@@ -30,10 +30,10 @@ class CityscapesDataset(CocoDataset):
         """Filter images too small or without ground truths."""
         valid_inds = []
         # obtain images that contain annotation
-        ids_with_ann = set(_['image_id'] for _ in self.coco.anns.values())
+        ids_with_ann = {_['image_id'] for _ in self.coco.anns.values()}
         # obtain images that contain annotations of the required categories
         ids_in_cat = set()
-        for i, class_id in enumerate(self.cat_ids):
+        for class_id in self.cat_ids:
             ids_in_cat |= set(self.coco.cat_img_map[class_id])
         # merge the image id sets of the two conditions and use the merged set
         # to filter out images if self.filter_empty_gt=True
@@ -44,7 +44,7 @@ class CityscapesDataset(CocoDataset):
             img_id = img_info['id']
             ann_ids = self.coco.getAnnIds(imgIds=[img_id])
             ann_info = self.coco.loadAnns(ann_ids)
-            all_iscrowd = all([_['iscrowd'] for _ in ann_info])
+            all_iscrowd = all(_['iscrowd'] for _ in ann_info)
             if self.filter_empty_gt and (self.img_ids[i] not in ids_in_cat
                                          or all_iscrowd):
                 continue
@@ -71,7 +71,7 @@ class CityscapesDataset(CocoDataset):
         gt_bboxes_ignore = []
         gt_masks_ann = []
 
-        for i, ann in enumerate(ann_info):
+        for ann in ann_info:
             if ann.get('ignore', False):
                 continue
             x1, y1, w, h = ann['bbox']
@@ -134,7 +134,7 @@ class CityscapesDataset(CocoDataset):
             result = results[idx]
             filename = self.data_infos[idx]['filename']
             basename = osp.splitext(osp.basename(filename))[0]
-            pred_txt = osp.join(outfile_prefix, basename + '_pred.txt')
+            pred_txt = osp.join(outfile_prefix, f'{basename}_pred.txt')
 
             bbox_result, segm_result = result
             bboxes = np.vstack(bbox_result)
@@ -165,8 +165,7 @@ class CityscapesDataset(CocoDataset):
                     class_id = CSLabels.name2label[classes].id
                     score = mask_score[i]
                     mask = maskUtils.decode(segms[i]).astype(np.uint8)
-                    png_filename = osp.join(outfile_prefix,
-                                            basename + f'_{i}_{classes}.png')
+                    png_filename = osp.join(outfile_prefix, f'{basename}_{i}_{classes}.png')
                     mmcv.imwrite(mask, png_filename)
                     fout.write(f'{osp.basename(png_filename)} {class_id} '
                                f'{score}\n')
@@ -190,14 +189,16 @@ class CityscapesDataset(CocoDataset):
                 for saving txt/png files when txtfile_prefix is not specified.
         """
         assert isinstance(results, list), 'results must be a list'
-        assert len(results) == len(self), (
-            'The length of results is not equal to the dataset len: {} != {}'.
-            format(len(results), len(self)))
+        assert len(results) == len(
+            self
+        ), f'The length of results is not equal to the dataset len: {len(results)} != {len(self)}'
+
 
         assert isinstance(results, list), 'results must be a list'
-        assert len(results) == len(self), (
-            'The length of results is not equal to the dataset len: {} != {}'.
-            format(len(results), len(self)))
+        assert len(results) == len(
+            self
+        ), f'The length of results is not equal to the dataset len: {len(results)} != {len(self)}'
+
 
         if txtfile_prefix is None:
             tmp_dir = tempfile.TemporaryDirectory()
@@ -249,13 +250,12 @@ class CityscapesDataset(CocoDataset):
             dict[str, float]: COCO style evaluation metric or cityscapes mAP \
                 and AP@50.
         """
-        eval_results = dict()
+        eval_results = {}
 
         metrics = metric.copy() if isinstance(metric, list) else [metric]
 
         if 'cityscapes' in metrics:
-            eval_results.update(
-                self._evaluate_cityscapes(results, outfile_prefix, logger))
+            eval_results |= self._evaluate_cityscapes(results, outfile_prefix, logger)
             metrics.remove('cityscapes')
 
         # left metrics are all coco metric
@@ -324,9 +324,10 @@ class CityscapesDataset(CocoDataset):
         groundTruthImgList = glob.glob(CSEval.args.groundTruthSearch)
         assert len(groundTruthImgList), 'Cannot find ground truth images' \
             f' in {CSEval.args.groundTruthSearch}.'
-        predictionImgList = []
-        for gt in groundTruthImgList:
-            predictionImgList.append(CSEval.getPrediction(gt, CSEval.args))
+        predictionImgList = [
+            CSEval.getPrediction(gt, CSEval.args) for gt in groundTruthImgList
+        ]
+
         CSEval_results = CSEval.evaluateImgLists(predictionImgList,
                                                  groundTruthImgList,
                                                  CSEval.args)['averages']

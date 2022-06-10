@@ -64,8 +64,7 @@ def bboxes_area(bboxes):
     assert bboxes.size(1) == 4
     w = (bboxes[:, 2] - bboxes[:, 0])
     h = (bboxes[:, 3] - bboxes[:, 1])
-    areas = w * h
-    return areas
+    return w * h
 
 
 @BBOX_ASSIGNERS.register_module()

@@ -31,35 +31,40 @@ test_pipeline = [
 ]
 data = dict(
     samples_per_gpu=2,
-    workers_per_gpu=0,  # workers_per_gpu > 0 may occur out of memory
+    workers_per_gpu=0,
     train=dict(
         type=dataset_type,
-        ann_file=data_root + 'annotations/oidv6-train-annotations-bbox.csv',
-        img_prefix=data_root + 'OpenImages/train/',
-        label_file=data_root + 'annotations/class-descriptions-boxable.csv',
-        hierarchy_file=data_root +
-        'annotations/bbox_labels_600_hierarchy.json',
-        pipeline=train_pipeline),
+        ann_file=f'{data_root}annotations/oidv6-train-annotations-bbox.csv',
+        img_prefix=f'{data_root}OpenImages/train/',
+        label_file=f'{data_root}annotations/class-descriptions-boxable.csv',
+        hierarchy_file=data_root
+        + 'annotations/bbox_labels_600_hierarchy.json',
+        pipeline=train_pipeline,
+    ),
     val=dict(
         type=dataset_type,
-        ann_file=data_root + 'annotations/validation-annotations-bbox.csv',
-        img_prefix=data_root + 'OpenImages/validation/',
-        label_file=data_root + 'annotations/class-descriptions-boxable.csv',
-        hierarchy_file=data_root +
-        'annotations/bbox_labels_600_hierarchy.json',
-        meta_file=data_root + 'annotations/validation-image-metas.pkl',
-        image_level_ann_file=data_root +
-        'annotations/validation-annotations-human-imagelabels-boxable.csv',
-        pipeline=test_pipeline),
+        ann_file=f'{data_root}annotations/validation-annotations-bbox.csv',
+        img_prefix=f'{data_root}OpenImages/validation/',
+        label_file=f'{data_root}annotations/class-descriptions-boxable.csv',
+        hierarchy_file=data_root
+        + 'annotations/bbox_labels_600_hierarchy.json',
+        meta_file=f'{data_root}annotations/validation-image-metas.pkl',
+        image_level_ann_file=data_root
+        + 'annotations/validation-annotations-human-imagelabels-boxable.csv',
+        pipeline=test_pipeline,
+    ),
     test=dict(
         type=dataset_type,
-        ann_file=data_root + 'annotations/validation-annotations-bbox.csv',
-        img_prefix=data_root + 'OpenImages/validation/',
-        label_file=data_root + 'annotations/class-descriptions-boxable.csv',
-        hierarchy_file=data_root +
-        'annotations/bbox_labels_600_hierarchy.json',
-        meta_file=data_root + 'annotations/validation-image-metas.pkl',
-        image_level_ann_file=data_root +
-        'annotations/validation-annotations-human-imagelabels-boxable.csv',
-        pipeline=test_pipeline))
+        ann_file=f'{data_root}annotations/validation-annotations-bbox.csv',
+        img_prefix=f'{data_root}OpenImages/validation/',
+        label_file=f'{data_root}annotations/class-descriptions-boxable.csv',
+        hierarchy_file=data_root
+        + 'annotations/bbox_labels_600_hierarchy.json',
+        meta_file=f'{data_root}annotations/validation-image-metas.pkl',
+        image_level_ann_file=data_root
+        + 'annotations/validation-annotations-human-imagelabels-boxable.csv',
+        pipeline=test_pipeline,
+    ),
+)
+
 evaluation = dict(interval=1, metric='mAP')
