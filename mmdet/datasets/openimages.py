@@ -114,15 +114,14 @@ class OpenImagesDataset(CustomDataset):
         self.get_metas = get_metas
         self.load_from_file = load_from_file
         self.meta_file = meta_file
-        if self.data_root is not None:
-            if not osp.isabs(self.meta_file):
-                self.meta_file = osp.join(self.data_root, self.meta_file)
+        if self.data_root is not None and not osp.isabs(self.meta_file):
+            self.meta_file = osp.join(self.data_root, self.meta_file)
         self.filter_labels = filter_labels
         self.rank, self.world_size = get_dist_info()
         self.temp_img_metas = []
         self.test_img_metas = []
         self.test_img_shapes = []
-        self.load_from_pipeline = False if load_from_file else True
+        self.load_from_pipeline = not load_from_file
 
     def get_classes_from_csv(self, label_file):
         """Get classes name from file.
@@ -197,11 +196,11 @@ class OpenImagesDataset(CustomDataset):
                     float(line[5]),  # xmax
                     float(line[7])  # ymax
                 ]
-                is_occluded = True if int(line[8]) == 1 else False
-                is_truncated = True if int(line[9]) == 1 else False
-                is_group_of = True if int(line[10]) == 1 else False
-                is_depiction = True if int(line[11]) == 1 else False
-                is_inside = True if int(line[12]) == 1 else False
+                is_occluded = int(line[8]) == 1
+                is_truncated = int(line[9]) == 1
+                is_group_of = int(line[10]) == 1
+                is_depiction = int(line[11]) == 1
+                is_inside = int(line[12]) == 1
 
                 self.ann_infos[img_id].append(
                     dict(
@@ -275,7 +274,7 @@ class OpenImagesDataset(CustomDataset):
         is_depictions = np.array(is_depictions, dtype=np.bool)
         is_insides = np.array(is_insides, dtype=np.bool)
 
-        ann = dict(
+        return dict(
             bboxes=bboxes.astype(np.float32),
             labels=labels.astype(np.int64),
             bboxes_ignore=bboxes_ignore.astype(np.float32),
@@ -284,9 +283,8 @@ class OpenImagesDataset(CustomDataset):
             is_occludeds=is_occludeds,
             is_truncateds=is_truncateds,
             is_depictions=is_depictions,
-            is_insides=is_insides)
-
-        return ann
+            is_insides=is_insides,
+        )
 
     def get_meta_from_file(self, meta_file=''):
         """Get image metas from pkl file."""
@@ -346,8 +344,7 @@ class OpenImagesDataset(CustomDataset):
         if self.filter_empty_gt:
             warnings.warn('OpenImageDatasets does not support '
                           'filtering empty gt images.')
-        valid_inds = [i for i in range(len(self))]
-        return valid_inds
+        return list(range(len(self)))
 
     def _set_group_flag(self):
         """Set flag according to image aspect ratio."""
@@ -366,9 +363,8 @@ class OpenImagesDataset(CustomDataset):
             (class_num, class_num).
         """
 
-        if self.data_root is not None:
-            if not osp.isabs(hierarchy_file):
-                hierarchy_file = osp.join(self.data_root, hierarchy_file)
+        if self.data_root is not None and not osp.isabs(hierarchy_file):
+            hierarchy_file = osp.join(self.data_root, hierarchy_file)
         with open(hierarchy_file, 'r') as f:
             hierarchy = json.load(f)
         class_num = len(self.CLASSES)
@@ -406,12 +402,11 @@ class OpenImagesDataset(CustomDataset):
 
         if 'Subcategory' in hierarchy_map:
             for node in hierarchy_map['Subcategory']:
-                if 'LabelName' in node:
-                    children_name = node['LabelName']
-                    children_index = self.index_dict[children_name]
-                    children = [children_index]
-                else:
+                if 'LabelName' not in node:
                     continue
+                children_name = node['LabelName']
+                children_index = self.index_dict[children_name]
+                children = [children_index]
                 if len(parents) > 0:
                     for parent_index in parents:
                         if get_all_parents:
@@ -757,10 +752,7 @@ class OpenImagesChallengeDataset(OpenImagesDataset):
                 self.index_dict[label_name] = label_id - 1
 
         indexes = np.argsort(id_list)
-        classes_names = []
-        for index in indexes:
-            classes_names.append(label_list[index])
-        return classes_names
+        return [label_list[index] for index in indexes]
 
     def load_annotations(self, ann_file):
         """Load annotation from annotation file."""
@@ -784,7 +776,7 @@ class OpenImagesChallengeDataset(OpenImagesDataset):
                      float(sp[3]),
                      float(sp[4])])
                 labels.append(int(sp[0]) - 1)  # labels begin from 1
-                is_group_ofs.append(True if int(sp[5]) == 1 else False)
+                is_group_ofs.append(int(sp[5]) == 1)
             i += img_gt_size
 
             gt_bboxes = np.array(bboxes, dtype=np.float32)
@@ -850,9 +842,7 @@ class OpenImagesChallengeDataset(OpenImagesDataset):
         Returns:
             dict: Annotation info of specified index.
         """
-        # avoid some potential error
-        data_infos = copy.deepcopy(self.data_infos[idx]['ann_info'])
-        return data_infos
+        return copy.deepcopy(self.data_infos[idx]['ann_info'])
 
     def load_image_label_from_csv(self, image_level_ann_file):
         """Load image level annotations from csv style ann_file.
@@ -873,12 +863,8 @@ class OpenImagesChallengeDataset(OpenImagesDataset):
         item_lists = defaultdict(list)
         with open(image_level_ann_file, 'r') as f:
             reader = csv.reader(f)
-            i = -1
-            for line in reader:
-                i += 1
-                if i == 0:
-                    continue
-                else:
+            for i, line in enumerate(reader):
+                if i != 0:
                     img_id = line[0]
                     label_id = line[1]
                     assert label_id in self.index_dict

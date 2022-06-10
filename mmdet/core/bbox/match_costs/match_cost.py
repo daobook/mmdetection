@@ -277,8 +277,7 @@ class DiceCost:
         else:
             denominator = mask_preds.pow(2).sum(1)[:, None] + \
                 gt_masks.pow(2).sum(1)[None, :]
-        loss = 1 - (numerator + self.eps) / (denominator + self.eps)
-        return loss
+        return 1 - (numerator + self.eps) / (denominator + self.eps)
 
     def __call__(self, mask_preds, gt_masks):
         """

@@ -162,11 +162,10 @@ class MMDetWandbHook(WandbLoggerHook):
             else:
                 self.ckpt_interval = self.ckpt_hook.interval
 
-        # Check conditions to log evaluation
         if self.log_evaluation or self.log_checkpoint_metadata:
             if self.eval_hook is None:
-                self.log_evaluation = False
                 self.log_checkpoint_metadata = False
+                self.log_evaluation = False
                 runner.logger.warning(
                     'To log evaluation or checkpoint metadata in '
                     'MMDetWandbHook, `EvalHook` or `DistEvalHook` in mmdet '
@@ -306,9 +305,9 @@ class MMDetWandbHook(WandbLoggerHook):
     def _get_eval_results(self):
         """Get model evaluation results."""
         results = self.eval_hook.latest_results
-        eval_results = self.val_dataset.evaluate(
-            results, logger='silent', **self.eval_hook.eval_kwargs)
-        return eval_results
+        return self.val_dataset.evaluate(
+            results, logger='silent', **self.eval_hook.eval_kwargs
+        )
 
     def _init_data_table(self):
         """Initialize the W&B Tables for validation data."""
@@ -440,11 +439,7 @@ class MMDetWandbHook(WandbLoggerHook):
             # Get dict of bounding boxes to be logged.
             wandb_boxes = self._get_wandb_bboxes(bboxes, labels, log_gt=False)
             # Get dict of masks to be logged.
-            if segms is not None:
-                wandb_masks = self._get_wandb_masks(segms, labels)
-            else:
-                wandb_masks = None
-
+            wandb_masks = None if segms is None else self._get_wandb_masks(segms, labels)
             # Log a row to the eval table.
             self.eval_table.add_data(
                 self.data_table_ref.data[ndx][0],
@@ -526,21 +521,20 @@ class MMDetWandbHook(WandbLoggerHook):
         Returns:
             Dictionary of masks to be logged.
         """
-        mask_label_dict = dict()
+        mask_label_dict = {}
         for mask, label in zip(masks, labels):
             label = label + 1
             # Get bitmap mask from polygon.
-            if is_poly_mask:
-                if height is not None and width is not None:
-                    mask = polygon_to_bitmap(mask, height, width)
+            if is_poly_mask and height is not None and width is not None:
+                mask = polygon_to_bitmap(mask, height, width)
             # Create composite masks for each class.
-            if label not in mask_label_dict.keys():
-                mask_label_dict[label] = mask
-            else:
+            if label in mask_label_dict:
                 mask_label_dict[label] = np.logical_or(mask_label_dict[label],
                                                        mask)
 
-        wandb_masks = dict()
+            else:
+                mask_label_dict[label] = mask
+        wandb_masks = {}
         for key, value in mask_label_dict.items():
             # Create mask for that class.
             value = value.astype(np.uint8)

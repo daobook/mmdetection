@@ -132,14 +132,12 @@ class InstanceData(GeneralData):
                 elif isinstance(v, np.ndarray):
                     new_data[k] = v[item.cpu().numpy()]
                 elif isinstance(v, list):
-                    r_list = []
                     # convert to indexes from boolTensor
                     if isinstance(item, torch.BoolTensor):
                         indexes = torch.nonzero(item).view(-1)
                     else:
                         indexes = item
-                    for index in indexes:
-                        r_list.append(v[index])
+                    r_list = [v[index] for index in indexes]
                     new_data[k] = r_list
         else:
             # item is a slice
@@ -181,8 +179,7 @@ class InstanceData(GeneralData):
         return new_data
 
     def __len__(self):
-        if len(self._data_fields):
-            for v in self.values():
-                return len(v)
-        else:
+        if not len(self._data_fields):
             raise AssertionError('This is an empty `InstanceData`.')
+        for v in self.values():
+            return len(v)

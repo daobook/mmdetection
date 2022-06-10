@@ -40,8 +40,8 @@ class SyncNormHook(Hook):
     def after_train_epoch(self, runner):
         """Synchronizing norm."""
         epoch = runner.epoch
-        module = runner.model
         if (epoch + 1) % self.interval == 0:
+            module = runner.model
             _, world_size = get_dist_info()
             if world_size == 1:
                 return

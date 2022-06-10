@@ -30,8 +30,7 @@ class YOLOXLrUpdaterHook(CosineAnnealingLrUpdaterHook):
             # exp warmup scheme
             k = self.warmup_ratio * pow(
                 (cur_iters + 1) / float(self.warmup_iters), 2)
-            warmup_lr = [_lr * k for _lr in regular_lr]
-            return warmup_lr
+            return [_lr * k for _lr in regular_lr]
 
         if isinstance(self.base_lr, dict):
             lr_groups = {}

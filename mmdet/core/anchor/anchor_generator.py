@@ -208,10 +208,7 @@ class AnchorGenerator:
         # use shape instead of len to keep tracing while exporting to onnx
         xx = x.repeat(y.shape[0])
         yy = y.view(-1, 1).repeat(1, x.shape[0]).view(-1)
-        if row_major:
-            return xx, yy
-        else:
-            return yy, xx
+        return (xx, yy) if row_major else (yy, xx)
 
     def grid_priors(self, featmap_sizes, dtype=torch.float32, device='cuda'):
         """Generate grid anchors in multiple feature levels.
@@ -310,10 +307,9 @@ class AnchorGenerator:
              num_base_anchors) % width * self.strides[level_idx][0]
         y = (prior_idxs // width //
              num_base_anchors) % height * self.strides[level_idx][1]
-        priors = torch.stack([x, y, x, y], 1).to(dtype).to(device) + \
-            self.base_anchors[level_idx][base_anchor_id, :].to(device)
-
-        return priors
+        return torch.stack([x, y, x, y], 1).to(dtype).to(
+            device
+        ) + self.base_anchors[level_idx][base_anchor_id, :].to(device)
 
     def grid_anchors(self, featmap_sizes, device='cuda'):
         """Generate grid anchors in multiple feature levels.
@@ -515,7 +511,7 @@ class SSDAnchorGenerator(AnchorGenerator):
             step = int(np.floor(max_ratio - min_ratio) / (self.num_levels - 2))
             min_sizes = []
             max_sizes = []
-            for ratio in range(int(min_ratio), int(max_ratio) + 1, step):
+            for ratio in range(min_ratio, max_ratio + 1, step):
                 min_sizes.append(int(self.input_size * ratio / 100))
                 max_sizes.append(int(self.input_size * (ratio + step) / 100))
             if self.input_size == 300:
